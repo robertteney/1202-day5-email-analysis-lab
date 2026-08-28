@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MyCC Email Classification Simulator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      display: flex;
+      height: 100vh;
+      background: #f4f4f4;
+      flex-direction: column;
+    }
+
+    .header {
+      background: #2c3e50;
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .header p {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #ecf0f1;
+    }
+
+    .container {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      width: 280px;
+      background: #2c3e50;
+      color: white;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .email-item {
+      background: #34495e;
+      margin: 10px 0;
+      padding: 10px 10px 10px 25px;
+      border-radius: 6px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .email-item:hover {
+      background: #3d566e;
+    }
+
+    .email-item.active {
+      background: #1abc9c;
+    }
+
+    .dot {
+      height: 14px;
+      width: 14px;
+      background-color: red;
+      border-radius: 50%;
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .dot.checked {
+      background-color: #2ecc71;
+    }
+
+    .dot.checked::after {
+      content: '✔';
+      color: white;
+      font-size: 9px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .content {
+      flex: 1;
+      padding: 20px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .email-body {
+      flex: 1;
+      white-space: pre-wrap;
+      background: #f9f9f9;
+      padding: 15px;
+      border: 1px solid #ccc;
+      margin-bottom: 20px;
+      border-radius: 6px;
+      overflow-y: auto;
+    }
+
+    .email-body a {
+      color: #0645ad;
+      text-decoration: underline;
+    }
+
+    .controls {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    select {
+      padding: 6px;
+      width: 200px;
+    }
+
+    button {
+      padding: 8px 14px;
+      background: #3498db;
+      border: none;
+      color: white;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    .result {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    .correct {
+      color: green;
+    }
+
+    .incorrect {
+      color: red;
+    }
+
+    .explanation {
+      font-weight: normal;
+      color: #444;
+      margin-top: 4px;
+      margin-bottom: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Email Threat Classification Exercise</h1>
+    <p>Click each email in the MyCC-Inbox, read the message, and classify it as Legit, Spam, or Phishing. Click save after each selection, a green check mark will appear on the email. Then submit your choices. Classify them correclty!</p>
+  </p>
+  </div>
+
+  <div class="container">
+    <div class="sidebar">
+      <h2>MyCC-Inbox</h2>
+      <div id="inboxContainer"></div>
+    </div>
+
+    <div class="content">
+      <div id="emailContent" class="email-body">Select an email to view its contents.</div>
+
+      <div class="controls">
+        <select id="classification">
+          <option value="">-- Classify this email --</option>
+          <option value="legit">Legit</option>
+          <option value="spam">Spam</option>
+          <option value="phishing">Phishing</option>
+        </select>
+        <button onclick="saveChoice()">Save</button>
+        <button onclick="submit()">Submit</button>
+        <button onclick="reset()">Reset</button>
+      </div>
+
+      <div class="result" id="result"></div>
+    </div>
+  </div>
+
+  <script>
+    const emailPool = [
+      // LEGIT (4)
+      {
+  subject: "Monthly Account Statement Ready",
+  body: `Hello Robert,
+
+Your monthly account statement for May 2025 is now available.
+
+You can access it securely by logging into your online banking portal:
+https://secure.mybank.com/login
+
+Account Summary:
+- Ending Balance: $4,210.87
+- Last Payment: $200 (05/23/2025)
+- Statement Period: 05/01/2025 - 05/31/2025
+
+If you have any questions about this statement or your account, please contact our support team via your online message center.
+
+Thank you for choosing MyBank.
+
+— MyBank Customer Care`,
+  correct: "legit",
+  reason: "This is a professional financial email containing no suspicious links, scare tactics, or urgency. It directs users to a trusted login portal."
+},
+      {
+  subject: "Welcome to CyberSec Foundations — Class Starts June 10",
+  body: `Hi Mason,
+
+Congratulations on enrolling in our CyberSec Foundations course! Your registration is confirmed and your first class begins on June 10, 2025.
+
+Course Dashboard: https://learn.edulearn.org/cybersec/login
+
+What’s next:
+✔ Review the syllabus and introductory materials.
+✔ Join the course forum to meet peers and instructors.
+✔ Complete the welcome module before the start date.
+
+If you have any issues accessing your dashboard, feel free to contact us at support@edulearn.org.
+
+We’re excited to help you begin your cybersecurity journey!
+
+— EduLearn Team`,
+  correct: "legit",
+  reason: "This educational email is personalized, informative, and links to an official learning portal. There's no deceptive language or pressure."
+},
+      {
+  subject: "Receipt for Your CloudHost Subscription Payment",
+  body: `Hello Alvin,
+
+Thank you for your recent payment for your CloudHost VPS subscription.
+
+Invoice Number: CH-20250601-1892
+Date Paid: June 1, 2025
+Amount: $19.99
+
+You can view or download your receipt from your billing dashboard:
+https://cloudhost.com/account/billing
+
+If you have any billing questions, our support team is available 24/7 through the customer portal.
+
+We appreciate your business and look forward to continuing to serve you.
+
+— CloudHost Billing Department`,
+  correct: "legit",
+  reason: "This message reflects a standard payment confirmation with clear invoice info, a trusted domain, and no manipulative tactics."
+},
+      {
+  subject: "Booking Confirmed: Your NYC Hotel Reservation, July 12–15",
+  body: `Hi Allison,
+
+Your hotel reservation has been successfully confirmed!
+
+📍 Hotel: Midtown Grand Hotel, New York City
+📅 Dates: July 12 – July 15, 2025
+🛏️ Room: Deluxe King with City View
+🧾 Confirmation #: 4395721-NYC
+
+You can view your reservation or make changes at:
+https://travelsafe.com/reservations
+
+A reminder with check-in instructions will be sent 48 hours before your stay.
+
+We hope you enjoy your trip!
+
+— TravelSafe Booking Services`,
+  correct: "legit",
+  reason: "This email contains clear, travel-specific details, a valid booking number, and no threatening or deceptive prompts."
+},
+
+      // SPAM (4)
+      {
+  subject: "Drop 20lbs in Just 14 Days — No Exercise Required!",
+  body: `Hey Josh,
+
+Summer is here, and so is your chance to get the body you've always wanted — without diet or workouts!
+
+Our new, doctor-developed weight loss gummies melt away stubborn fat while you sleep. No harmful chemicals. No subscriptions. Just results.
+
+💊 Try it today: http://slimfast-burners.com/free-trial
+
+Limited supply left. Don’t wait!
+
+To your transformation,  
+— SlimFast Burners Team`,
+  correct: "spam",
+  reason: "Over-the-top health claims, fake urgency, and a promotional link to a sketchy domain make this a textbook spam email."
+},
+      {
+  subject: "🔥 Make Your Computer 3x Faster (Free Download)",
+  body: `George,
+
+Is your PC running slow? It’s not your imagination.
+
+Most computers get clogged with junk files, unused apps, and hidden errors. Our powerful optimizer cleans it all up — fast.
+
+✅ Boost performance instantly  
+✅ 100% Free download  
+✅ No tech knowledge required
+
+Get started now: http://maxspeed-pcfixer.com
+
+Your system will thank you!
+
+— PC Optimizer Pro`,
+  correct: "spam",
+  reason: "This email preys on technical fears and promotes a free download through an unverified third-party site."
+},
+      {
+  subject: "You’ve Been Selected to Win a New iPhone 15!",
+  body: `Dear Valued User,
+
+You've been chosen to receive a brand new iPhone 15 — absolutely free! 🎁
+
+Just answer a short survey and enter your shipping info:
+http://iphone15-giveaway.com/claim-now
+
+Winners are selected every 2 minutes — claim your device before time runs out!
+
+Good luck,  
+— The iPhone Giveaway Team
+
+*Offer valid for US residents only. Shipping & handling may apply.`,
+  correct: "spam",
+  reason: "The message uses urgency, vague user targeting, and a prize offer with fine print — all classic spam elements."
+},
+      {
+  subject: "🔥 Watch Any Show From Any Country — No Restrictions!",
+  body: `Sean,
+
+Tired of missing out on global Netflix and Disney+ content? Unlock over 1,000 international shows instantly with our premium streaming tool.
+
+✓ Works on Netflix, Hulu, BBC, and more  
+✓ Ultra-fast servers  
+✓ No installation required
+
+Start your access now: http://flix-hacktool.net/unlock
+
+Stream smarter, not harder.
+
+— StreamFreedom Pro`,
+  correct: "spam",
+  reason: "Spammy language, overpromising capabilities, and a suspicious tool URL identify this as unsolicited and potentially harmful."
+},
+
+      // PHISHING (4)
+      {
+  subject: "⚠️ Urgent: Your Bank Account Has Been Temporarily Suspended",
+  body: `Dear Virgina,
+
+We detected suspicious transactions from a foreign IP address and, as a security precaution, your account has been temporarily suspended.
+
+To restore access, please verify your identity immediately:
+http://securebank-verification.com
+
+If no action is taken within 24 hours, your account may be permanently locked due to inactivity.
+
+We apologize for any inconvenience and appreciate your prompt attention to this matter.
+
+— Online Security Division  
+Global Trust Bank`,
+  correct: "phishing",
+  reason: "This email uses fear and urgency, impersonates a bank, and includes a fake verification link designed to steal login credentials."
+},
+      {
+  subject: "Microsoft Account Alert: Password Expiring Today",
+  body: `Hello Scott,
+
+Your Microsoft account password is set to expire on June 8, 2025. Failure to update your password may result in access loss.
+
+To reset your password, click below:
+http://msaccount-updatecenter.com
+
+This security policy helps us protect your data and keep your account safe.
+
+Thank you,  
+— Microsoft Account Support`,
+  correct: "phishing",
+  reason: "It uses a common spoof tactic — claiming a password expiration — and includes a fake link that resembles a Microsoft domain."
+},
+      {
+  subject: "Your PayPal Account Has Been Limited",
+  body: `Dear Customer,
+
+We've noticed unauthorized attempts to log in to your PayPal account.
+
+To prevent fraud, we've temporarily limited access to your account. To restore access, please confirm your information:
+
+http://paypal-resolve-login.net
+
+This action is required to comply with PayPal’s security standards. Failure to respond will result in permanent limitation.
+
+Sincerely,  
+PayPal Account Review Department`,
+  correct: "phishing",
+  reason: "This impersonates PayPal, includes a convincing domain, and attempts to trick the user into clicking a malicious link."
+},
+      {
+  subject: "Unusual Login Attempt Detected from Unknown Device",
+  body: `Hi Samantha,
+
+A login attempt was made on your email account from an unrecognized location.
+
+Device: Windows PC  
+Location: Jakarta, Indonesia  
+Time: 06/07/2025 – 2:13 AM
+
+If this was not you, please secure your account now to avoid unauthorized access:
+http://email-verify-alert.com
+
+Thank you,  
+— Webmail Security Center`,
+  correct: "phishing",
+  reason: "This uses scare tactics and a fake security alert format to lure the user into clicking a malicious verification link."
+}
+    ];
+
+    let selectedEmail = null;
+    let activeEmails = [];
+    const userChoices = {};
+
+    function shuffle(array) {
+      let arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function generateInbox() {
+      const legit = shuffle(emailPool.filter(e => e.correct === "legit"))[0];
+      const spam = shuffle(emailPool.filter(e => e.correct === "spam"))[0];
+      const phishing = shuffle(emailPool.filter(e => e.correct === "phishing"))[0];
+
+      const used = new Set([legit, spam, phishing]);
+      const remaining = emailPool.filter(e => !used.has(e));
+      const fourth = shuffle(remaining)[0];
+
+      activeEmails = shuffle([legit, spam, phishing, fourth]);
+
+      const inbox = document.getElementById("inboxContainer");
+      inbox.innerHTML = "";
+      activeEmails.forEach((email, i) => {
+        const div = document.createElement("div");
+        div.className = "email-item";
+        div.id = "item" + i;
+        div.onclick = () => openEmail(i);
+        div.innerHTML = `<span class="dot" id="dot${i}"></span> ${email.subject}`;
+        inbox.appendChild(div);
+      });
+    }
+
+    function openEmail(index) {
+      selectedEmail = index;
+      document.querySelectorAll(".email-item").forEach((el, i) => {
+        el.classList.toggle("active", i === index);
+      });
+
+      const linkedBody = activeEmails[index].body.replace(/(https?:\/\/[^\s]+)/g, url => {
+        return `<a href="${url}" target="_blank">${url}</a>`;
+      });
+
+      document.getElementById("emailContent").innerHTML = linkedBody;
+      document.getElementById("classification").value = userChoices[index] || "";
+    }
+
+    function saveChoice() {
+      if (selectedEmail === null) return alert("Select an email first.");
+      const value = document.getElementById("classification").value;
+      if (!value) return alert("Please choose a classification.");
+      userChoices[selectedEmail] = value;
+
+      const dot = document.getElementById("dot" + selectedEmail);
+      dot.classList.add("checked");
+      dot.style.display = "inline-block";
+    }
+
+    function submit() {
+      if (Object.keys(userChoices).length !== activeEmails.length) {
+        alert("Please classify all emails before submitting.");
+        return;
+      }
+
+      let score = 0;
+      let output = "<h3>Results:</h3>";
+
+      activeEmails.forEach((email, idx) => {
+        const userAnswer = userChoices[idx];
+        const isCorrect = userAnswer === email.correct;
+        if (isCorrect) score++;
+        output += `<div class="${isCorrect ? 'correct' : 'incorrect'}">
+          <strong>${email.subject}</strong>: You said "${userAnswer}" — ${isCorrect ? 'Correct' : `Incorrect (Answer: ${email.correct})`}
+        </div>
+        <div class="explanation">${email.reason}</div>`;
+      });
+
+      output += `<p>Your Score: ${score} / ${activeEmails.length}</p>`;
+      document.getElementById("result").innerHTML = output;
+    }
+
+    function reset() {
+      selectedEmail = null;
+      Object.keys(userChoices).forEach(k => delete userChoices[k]);
+      document.getElementById("result").innerHTML = "";
+      document.getElementById("emailContent").textContent = "Select an email to view its contents.";
+      document.getElementById("classification").value = "";
+      generateInbox();
+    }
+
+    // Initialize inbox on load
+    generateInbox();
+  </script>
+</body>
+</html>
